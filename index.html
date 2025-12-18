@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bi-Weekly Timesheet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+    }
+    .sheet-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px 24px 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .logo-row {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .logo-row img {
+      max-height: 70px;
+    }
+    h1 {
+      text-align: center;
+      margin-top: 5px;
+      margin-bottom: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      font-size: 14px;
+    }
+    th {
+      background: #e8e8e8;
+      text-align: left;
+    }
+    .no-border td {
+      border: none;
+      padding: 4px 4px;
+    }
+    input[type="text"],
+    input[type="time"],
+    input[type="number"],
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 3px 4px;
+      font-size: 13px;
+    }
+    input[readonly] {
+      background-color: #f7f7f7;
+    }
+    .total-row td {
+      font-weight: bold;
+      background: #fafafa;
+    }
+    .buttons {
+      margin-top: 15px;
+      text-align: right;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    button {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-print {
+      background-color: #777;
+      color: #fff;
+    }
+    .btn-submit {
+      background-color: #0073e6;
+      color: #fff;
+    }
+    @media print {
+      .buttons {
+        display: none;
+      }
+      body {
+        background: #fff;
+      }
+      .sheet-container {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sheet-container">
+  <div class="logo-row">
+    <img src="logo.png" alt="360 Degree Therapy Logo">
+  </div>
+
+  <h1>Bi-Weekly Timesheet</h1>
+
+  <table class="no-border">
+    <tr>
+      <td style="width: 18%;"><strong>Period:</strong></td>
+      <td style="width: 32%;">
+        <select id="weekPeriod">
+          <option value="0-1">Jan 1st Half</option>
+          <option value="0-2">Jan 2nd Half</option>
+          <option value="1-1">Feb 1st Half</option>
+          <option value="1-2">Feb 2nd Half</option>
+          <option value="2-1">Mar 1st Half</option>
+          <option value="2-2">Mar 2nd Half</option>
+          <option value="3-1">Apr 1st Half</option>
+          <option value="3-2">Apr 2nd Half</option>
+          <option value="4-1">May 1st Half</option>
+          <option value="4-2">May 2nd Half</option>
+          <option value="5-1">Jun 1st Half</option>
+          <option value="5-2">Jun 2nd Half</option>
+          <option value="6-1">Jul 1st Half</option>
+          <option value="6-2">Jul 2nd Half</option>
+          <option value="7-1">Aug 1st Half</option>
+          <option value="7-2">Aug 2nd Half</option>
+          <option value="8-1">Sep 1st Half</option>
+          <option value="8-2">Sep 2nd Half</option>
+          <option value="9-1">Oct 1st Half</option>
+          <option value="9-2">Oct 2nd Half</option>
+          <option value="10-1">Nov 1st Half</option>
+          <option value="10-2">Nov 2nd Half</option>
+          <option value="11-1">Dec 1st Half</option>
+          <option value="11-2">Dec 2nd Half</option>
+        </select>
+      </td>
+      <td style="width: 18%;"><strong>Send To Email:</strong></td>
+      <td style="width: 32%;"><input type="text" id="recipientEmail" placeholder="supervisor@example.com" /></td>
+    </tr>
+    <tr>
+      <td><strong>School Name:</strong></td>
+      <td><input type="text" id="schoolName" /></td>
+      <td><strong>Supervisor Email:</strong></td>
+      <td><input type="text" id="supervisorEmail" /></td>
+    </tr>
+    <tr>
+      <td><strong>Employee Name:</strong></td>
+      <td><input type="text" id="employeeName" /></td>
+      <td><strong>Title:</strong></td>
+      <td><input type="text" id="employeeTitle" /></td>
+    </tr>
+    <tr>
+      <td><strong>Supervisor Name:</strong></td>
+      <td><input type="text" id="supervisorName" /></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </table>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 36%;">Day of the month</th>
+        <th style="width: 16%;">Time In</th>
+        <th style="width: 16%;">Time Out</th>
+        <th style="width: 16%;">Lunch Break (minutes)</th>
+        <th style="width: 16%;">Total Hours</th>
+      </tr>
+    </thead>
+    <tbody id="timesheetBody"></tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td>Total:</td>
+        <td></td><td></td><td></td>
+        <td><span id="totalHours">0.00</span></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="buttons">
+    <button class="btn-print" type="button" onclick="printTimesheet()">Print</button>
+    <button class="btn-submit" type="button" onclick="submitTimesheet()">Submit & Email</button>
+  </div>
+</div>
+
+<script>
+  // ✅ YOUR Google Sheets Web App URL:
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZHjAz7akkH0E4SPQmHppIMi-A_orkvNeNX-8ElaW83bSZrGJe4erliwVEVR8rRNlr/ex";
+
+  const monthNames = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
+
+  function ordinalSuffix(n) {
+    const j=n%10, k=n%100;
+    if(j===1&&k!==11)return"st";
+    if(j===2&&k!==12)return"nd";
+    if(j===3&&k!==13)return"rd";
+    return"th";
+  }
+
+  function createRow(dateStr) {
+    const tr=document.createElement("tr");
+
+    const tdDate=document.createElement("td");
+    tdDate.textContent=dateStr;
+    tr.appendChild(tdDate);
+
+    const tdIn=document.createElement("td");
+    const inputIn=document.createElement("input");
+    inputIn.type="time"; inputIn.className="time-in";
+    tdIn.appendChild(inputIn); tr.appendChild(tdIn);
+
+    const tdOut=document.createElement("td");
+    const inputOut=document.createElement("input");
+    inputOut.type="time"; inputOut.className="time-out";
+    tdOut.appendChild(inputOut); tr.appendChild(tdOut);
+
+    const tdLunch=document.createElement("td");
+    const inputLunch=document.createElement("input");
+    inputLunch.type="number"; inputLunch.min="0"; inputLunch.step="5"; inputLunch.className="lunch";
+    tdLunch.appendChild(inputLunch); tr.appendChild(tdLunch);
+
+    const tdTotal=document.createElement("td");
+    const inputTotal=document.createElement("input");
+    inputTotal.type="number"; inputTotal.step="0.01"; inputTotal.readOnly=true; inputTotal.className="row-total";
+    tdTotal.appendChild(inputTotal); tr.appendChild(tdTotal);
+
+    [inputIn,inputOut,inputLunch].forEach(el=>el.addEventListener("change",updateTotals));
+
+    return tr;
+  }
+
+  function populateDays() {
+    const value=document.getElementById("weekPeriod").value;
+    const [monthIndex, half]=value.split("-").map(Number);
+    const year=new Date().getFullYear();
+    const daysInMonth=new Date(year,monthIndex+1,0).getDate();
+    const startDay=half===1?1:16;
+    const endDay=half===1?15:daysInMonth;
+
+    const tbody=document.getElementById("timesheetBody");
+    tbody.innerHTML="";
+
+    for(let d=startDay; d<=endDay; d++){
+      const dateStr=`${monthNames[monthIndex]} ${d}${ordinalSuffix(d)}, ${year}`;
+      tbody.appendChild(createRow(dateStr));
+    }
+    updateTotals();
+  }
+
+  function updateTotals() {
+    let totalAll=0;
+    document.querySelectorAll("#timesheetBody tr").forEach(row=>{
+      const tIn=row.querySelector(".time-in").value;
+      const tOut=row.querySelector(".time-out").value;
+      const lunch=parseFloat(row.querySelector(".lunch").value)||0;
+      const totalEl=row.querySelector(".row-total");
+
+      if(tIn&&tOut){
+        const [inH,inM]=tIn.split(":").map(Number);
+        const [outH,outM]=tOut.split(":").map(Number);
+        let minutes=(outH*60+outM)-(inH*60+inM)-lunch;
+        if(minutes<0)minutes=0;
+        const hours=minutes/60;
+        totalEl.value=hours.toFixed(2);
+        totalAll+=hours;
+      } else {
+        totalEl.value="";
+      }
+    });
+    document.getElementById("totalHours").textContent=totalAll.toFixed(2);
+  }
+
+  function printTimesheet(){
+    window.print();
+  }
+
+  async function submitTimesheet(){
+    updateTotals();
+
+    const period=document.getElementById("weekPeriod").selectedOptions[0].text;
+    const schoolName=document.getElementById("schoolName").value;
+    const employeeName=document.getElementById("employeeName").value;
+    const employeeTitle=document.getElementById("employeeTitle").value;
+    const supervisorName=document.getElementById("supervisorName").value;
+    const supervisorEmail=document.getElementById("supervisorEmail").value;
+    const recipient=document.getElementById("recipientEmail").value.trim();
+    if(!recipient)return alert("Please enter email address.");
+
+    const totalHours=document.getElementById("totalHours").textContent;
+
+    const rowsData=[];
+    let body=`Timesheet Period: ${period}\nSchool: ${schoolName}\nEmployee: ${employeeName}\nTitle: ${employeeTitle}\nSupervisor: ${supervisorName}\nSupervisor Email: ${supervisorEmail}\n\nDay-by-day details:\n`;
+
+    document.querySelectorAll("#timesheetBody tr").forEach(row=>{
+      const date=row.cells[0].textContent;
+      const timeIn=row.querySelector(".time-in").value;
+      const timeOut=row.querySelector(".time-out").value;
+      const lunch=row.querySelector(".lunch").value||"0";
+      const hours=row.querySelector(".row-total").value||"0";
+
+      rowsData.push({date,timeIn,timeOut,lunchMinutes:lunch,hours});
+
+      if(timeIn||timeOut||hours!=="0"){
+        body+=`${date} | In: ${timeIn} | Out: ${timeOut} | Lunch (min): ${lunch} | Hours: ${hours}\n`;
+      }
+    });
+
+    body+=`\nTotal Hours: ${totalHours}\n`;
+
+    const payload={
+      period,schoolName,employeeName,employeeTitle,supervisorName,
+      supervisorEmail,recipientEmail:recipient,totalHours,rows:rowsData
+    };
+
+    try{
+      await fetch(SCRIPT_URL,{
+        method:"POST",
+        mode:"no-cors",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload)
+      });
+    }catch(e){console.error(e);}
+
+    let cc="process@360customer.com";
+    if(supervisorEmail)cc+=`,`+supervisorEmail;
+
+    const subject=`Timesheet - ${employeeName} - ${period}`;
+    const mailto=
+      `mailto:${encodeURIComponent(recipient)}?cc=${encodeURIComponent(cc)}`+
+      `&subject=${encodeURIComponent(subject)}`+
+      `&body=${encodeURIComponent(body)}`;
+
+    window.location.href=mailto;
+  }
+
+  document.addEventListener("DOMContentLoaded",()=>{
+    populateDays();
+    document.getElementById("weekPeriod").addEventListener("change",populateDays);
+  });
+</script>
+
+</body>
+</html>
