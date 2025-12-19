@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Bi-Weekly Timesheet – 2026</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
     body { font-family: Arial, sans-serif; background:#f4f4f4; padding:20px; }
     .sheet-container {
@@ -30,11 +31,9 @@
 
     .total-row td { font-weight: bold; background:#fafafa; }
 
-    .buttons {
-      margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;
-    }
+    .buttons { margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end; }
     button {
-      padding: 8px 16px; border-radius: 4px; border: none;
+      padding: 8px 16px; border-radius: 6px; border: none;
       cursor: pointer; font-size: 14px;
     }
     .btn-print { background:#777; color:#fff; }
@@ -42,13 +41,11 @@
 
     /* Login UI */
     .login-box { text-align:center; }
-    .login-inputs { max-width: 340px; margin: 0 auto; text-align:left; }
-    .login-inputs label { display:block; margin-top: 8px; font-size: 13px; }
-    .login-buttons {
-      margin-top: 12px; display:flex; gap:10px; justify-content:center; flex-wrap: wrap;
-    }
+    .login-inputs { max-width: 380px; margin: 0 auto; text-align:left; }
+    .login-inputs label { display:block; margin-top: 10px; font-size: 13px; }
+    .login-buttons { margin-top: 14px; display:flex; gap:12px; justify-content:center; flex-wrap: wrap; }
     .login-message { margin-top: 10px; min-height: 18px; font-size: 13px; color:#b00020; }
-    .user-email { margin-top: 6px; font-size: 13px; color:#333; }
+    .user-email { margin-top: 8px; font-size: 13px; color:#333; }
 
     @media print {
       .buttons { display:none; }
@@ -72,24 +69,29 @@
       <input type="email" id="loginEmail" placeholder="you@example.com" />
 
       <label for="loginPassword">Password</label>
-      <input type="password" id="loginPassword" placeholder="Enter password" />
+      <input type="password" id="loginPassword" placeholder="Create or enter password" />
     </div>
 
     <div class="login-buttons">
       <button id="signUpBtn" type="button">Sign up</button>
       <button id="loginBtn" type="button">Log in</button>
+      <button id="resetBtn" type="button">Forgot password</button>
       <button id="signOutBtn" type="button" style="display:none;">Sign out</button>
     </div>
 
     <div id="loginMessage" class="login-message"></div>
     <div id="loggedInInfo" class="user-email"></div>
+
+    <div style="margin-top:10px; font-size:12px; color:#666; text-align:left; max-width:380px; margin-left:auto; margin-right:auto;">
+      <strong>Note:</strong> This password is for the timesheet system (Firebase), not your Gmail password.
+    </div>
   </div>
 </div>
 
-<!-- TIMESHEET (hidden until login) -->
+<!-- TIMESHEET -->
 <div id="timesheetContainer" class="sheet-container" style="display:none;">
   <div class="logo-row">
-    <!-- Put logo.png in your repo root (same folder as index.html) -->
+    <!-- Put logo.png in the same folder as index.html in your repo -->
     <img src="logo.png" alt="360 Logo">
   </div>
 
@@ -128,11 +130,11 @@
   <table>
     <thead>
       <tr>
-        <th style="width:36%;">Date (Weekday)</th>
-        <th style="width:16%;">Time In</th>
-        <th style="width:16%;">Time Out</th>
-        <th style="width:16%;">Lunch (minutes)</th>
-        <th style="width:16%;">Hours</th>
+        <th style="width:40%;">Date (Weekday)</th>
+        <th style="width:15%;">Time In</th>
+        <th style="width:15%;">Time Out</th>
+        <th style="width:15%;">Lunch (minutes)</th>
+        <th style="width:15%;">Hours</th>
       </tr>
     </thead>
     <tbody id="timesheetBody"></tbody>
@@ -148,6 +150,10 @@
     <button class="btn-print" type="button" onclick="window.print()">Print</button>
     <button class="btn-submit" type="button" onclick="submitTimesheet()">Submit</button>
   </div>
+
+  <div style="margin-top:10px; font-size:12px; color:#666;">
+    Submission will be saved & emailed by the server. Unauthorized users cannot submit.
+  </div>
 </div>
 
 <!-- Firebase compat SDKs -->
@@ -157,10 +163,10 @@
 <script>
 /* ===================== CONFIG ===================== */
 
-// Your Apps Script Web App URL
+// Your Apps Script Web App URL (POST only)
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZHjAz7akkH0E4SPQmHppIMi-A_orkvNeNX-8ElaW83bSZrGJe4erliwVEVR8rRNlr/exec";
 
-// Your Firebase config (compat-style)
+// Your Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDn4kef3XjyJiDgXnD8ZLRO_-q3c7467pA",
   authDomain: "timesheet360-92220.firebaseapp.com",
@@ -175,7 +181,94 @@ const auth = firebase.auth();
 
 let loggedInEmail = "";
 
-/* ===================== HELPERS ===================== */
+/* ===================== UI HELPERS ===================== */
+
+function setMsg(text, ok=false) {
+  const el = document.getElementById("loginMessage");
+  el.style.color = ok ? "#006400" : "#b00020";
+  el.textContent = text || "";
+}
+
+function showLogin() {
+  document.getElementById("loginContainer").style.display = "block";
+  document.getElementById("timesheetContainer").style.display = "none";
+  document.getElementById("signOutBtn").style.display = "none";
+  document.getElementById("loggedInInfo").textContent = "";
+}
+
+function showTimesheet(email) {
+  document.getElementById("loginContainer").style.display = "none";
+  document.getElementById("timesheetContainer").style.display = "block";
+  document.getElementById("signOutBtn").style.display = "inline-block";
+  document.getElementById("loggedInInfo").textContent = "Logged in as: " + email;
+}
+
+/* ===================== AUTH (NO FETCH HERE) ===================== */
+
+document.getElementById("signUpBtn").addEventListener("click", async () => {
+  try {
+    setMsg("");
+    const email = (document.getElementById("loginEmail").value || "").trim().toLowerCase();
+    const pass  = document.getElementById("loginPassword").value || "";
+
+    if (!email || !pass) return setMsg("Please enter both email and password.");
+    if (pass.length < 6) return setMsg("Password must be at least 6 characters.");
+
+    await auth.createUserWithEmailAndPassword(email, pass);
+    setMsg("Account created. You are now logged in.", true);
+  } catch (err) {
+    console.error("Sign up error:", err);
+    setMsg(err?.message || "Sign up failed.");
+  }
+});
+
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  try {
+    setMsg("");
+    const email = (document.getElementById("loginEmail").value || "").trim().toLowerCase();
+    const pass  = document.getElementById("loginPassword").value || "";
+
+    if (!email || !pass) return setMsg("Please enter both email and password.");
+
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch (err) {
+    console.error("Login error:", err);
+    setMsg(err?.message || "Login failed.");
+  }
+});
+
+document.getElementById("resetBtn").addEventListener("click", async () => {
+  try {
+    setMsg("");
+    const email = (document.getElementById("loginEmail").value || "").trim().toLowerCase();
+    if (!email) return setMsg("Enter your email first, then click Forgot password.");
+
+    await auth.sendPasswordResetEmail(email);
+    setMsg("Password reset email sent. Check your inbox.", true);
+  } catch (err) {
+    console.error("Reset error:", err);
+    setMsg(err?.message || "Password reset failed.");
+  }
+});
+
+document.getElementById("signOutBtn").addEventListener("click", async () => {
+  await auth.signOut();
+});
+
+auth.onAuthStateChanged(user => {
+  if (!user || !user.email) {
+    loggedInEmail = "";
+    showLogin();
+    return;
+  }
+  loggedInEmail = user.email;
+  setMsg("");
+  showTimesheet(loggedInEmail);
+  buildPeriods();
+  populateDays();
+});
+
+/* ===================== TIMESHEET ===================== */
 
 const YEAR = 2026;
 const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -189,99 +282,9 @@ function ordinalSuffix(n) {
   return "th";
 }
 
-function setMsg(text, ok=false) {
-  const el = document.getElementById("loginMessage");
-  el.style.color = ok ? "#006400" : "#b00020";
-  el.textContent = text || "";
-}
-
-/* ===================== ALLOW LIST (Option 2) ===================== */
-
-/* ===================== LOGIN WIRING ===================== */
-
-function wireAuthUI() {
-  const elLoginEmail = document.getElementById("loginEmail");
-  const elLoginPassword = document.getElementById("loginPassword");
-  const elSignUpBtn = document.getElementById("signUpBtn");
-  const elLoginBtn = document.getElementById("loginBtn");
-  const elSignOutBtn = document.getElementById("signOutBtn");
-  const elLoggedInInfo = document.getElementById("loggedInInfo");
-  const elLoginContainer = document.getElementById("loginContainer");
-  const elTimesheetContainer = document.getElementById("timesheetContainer");
-
-  elSignUpBtn.addEventListener("click", async () => {
-    try {
-      setMsg("");
-      const email = (elLoginEmail.value || "").trim().toLowerCase();
-      const pass  = elLoginPassword.value || "";
-
-      if (!email || !pass) return setMsg("Please enter both email and password.");
-
-      await auth.createUserWithEmailAndPassword(email, pass);
-      setMsg("Account created. You are now logged in.", true);
-
-    } catch (err) {
-      console.error("Sign up error:", err);
-      setMsg(err?.message || "Sign up failed. Please try again.");
-    }
-  });
-
-  elLoginBtn.addEventListener("click", async () => {
-    try {
-      setMsg("");
-      const email = (elLoginEmail.value || "").trim().toLowerCase();
-      const pass  = elLoginPassword.value || "";
-
-      if (!email || !pass) return setMsg("Please enter both email and password.");
-
-      await auth.signInWithEmailAndPassword(email, pass);
-    } catch (err) {
-      console.error("Login error:", err);
-      setMsg(err?.message || "Login failed. Please try again.");
-    }
-  });
-
-  elSignOutBtn.addEventListener("click", async () => {
-    await auth.signOut();
-  });
-
-  auth.onAuthStateChanged(async (user) => {
-    try {
-      if (!user || !user.email) {
-        loggedInEmail = "";
-        elLoggedInInfo.textContent = "";
-        elSignOutBtn.style.display = "none";
-        elLoginContainer.style.display = "block";
-        elTimesheetContainer.style.display = "none";
-        return;
-      }
-
-      // Enforce allow-list after login too
-      
-      loggedInEmail = user.email;
-      elLoggedInInfo.textContent = "Logged in as: " + loggedInEmail;
-      elSignOutBtn.style.display = "inline-block";
-      setMsg("");
-
-      elLoginContainer.style.display = "none";
-      elTimesheetContainer.style.display = "block";
-
-      buildPeriods();
-      populateDays();
-
-    } catch (err) {
-      console.error("Auth state error:", err);
-      await auth.signOut();
-      setMsg("Authorization check failed (cannot read allow-list). Please contact HR.");
-    }
-  });
-}
-
-/* ===================== TIMESHEET UI ===================== */
-
 function buildPeriods() {
   const sel = document.getElementById("weekPeriod");
-  if (sel.options.length > 0) return; // only build once
+  if (sel.options.length > 0) return;
 
   monthNames.forEach((m, idx) => {
     sel.add(new Option(`${m} 1st Half`, `${idx}-1`));
@@ -294,42 +297,18 @@ function buildPeriods() {
 function createRow(dateStr) {
   const tr = document.createElement("tr");
 
-  const tdDate = document.createElement("td");
-  tdDate.textContent = dateStr;
-  tr.appendChild(tdDate);
+  tr.innerHTML = `
+    <td>${dateStr}</td>
+    <td><input type="time" class="time-in"></td>
+    <td><input type="time" class="time-out"></td>
+    <td><input type="number" class="lunch" min="0" step="5" placeholder="0"></td>
+    <td><input class="row-total" readonly></td>
+  `;
 
-  const tdIn = document.createElement("td");
-  const inEl = document.createElement("input");
-  inEl.type = "time";
-  inEl.className = "time-in";
-  tdIn.appendChild(inEl);
-  tr.appendChild(tdIn);
+  tr.querySelector(".time-in").addEventListener("change", updateTotals);
+  tr.querySelector(".time-out").addEventListener("change", updateTotals);
+  tr.querySelector(".lunch").addEventListener("input", updateTotals);
 
-  const tdOut = document.createElement("td");
-  const outEl = document.createElement("input");
-  outEl.type = "time";
-  outEl.className = "time-out";
-  tdOut.appendChild(outEl);
-  tr.appendChild(tdOut);
-
-  const tdLunch = document.createElement("td");
-  const lunchEl = document.createElement("input");
-  lunchEl.type = "number";
-  lunchEl.min = "0";
-  lunchEl.step = "5";
-  lunchEl.placeholder = "0";
-  lunchEl.className = "lunch";
-  tdLunch.appendChild(lunchEl);
-  tr.appendChild(tdLunch);
-
-  const tdHours = document.createElement("td");
-  const hoursEl = document.createElement("input");
-  hoursEl.readOnly = true;
-  hoursEl.className = "row-total";
-  tdHours.appendChild(hoursEl);
-  tr.appendChild(tdHours);
-
-  [inEl, outEl, lunchEl].forEach(el => el.addEventListener("change", updateTotals));
   return tr;
 }
 
@@ -347,7 +326,7 @@ function populateDays() {
   for (let d = startDay; d <= endDay; d++) {
     const dt = new Date(YEAR, monthIndex, d);
     const dow = dt.getDay();
-    if (dow === 0 || dow === 6) continue; // skip Sunday + Saturday
+    if (dow === 0 || dow === 6) continue; // skip Sun/Sat
 
     const label = `${dayNames[dow]}, ${monthNames[monthIndex]} ${d}${ordinalSuffix(d)}, ${YEAR}`;
     tbody.appendChild(createRow(label));
@@ -368,7 +347,6 @@ function updateTotals() {
     if (tIn && tOut) {
       const [inH, inM] = tIn.split(":").map(Number);
       const [outH, outM] = tOut.split(":").map(Number);
-
       let minutes = (outH * 60 + outM) - (inH * 60 + inM) - lunchMinutes;
       if (minutes < 0) minutes = 0;
 
@@ -383,12 +361,12 @@ function updateTotals() {
   document.getElementById("totalHours").textContent = totalAll.toFixed(2);
 }
 
-/* ===================== SUBMIT ===================== */
+/* ===================== SUBMIT (ONLY CALLS APPS SCRIPT HERE) ===================== */
 
 async function submitTimesheet() {
   updateTotals();
 
-  const period = document.getElementById("weekPeriod").selectedOptions[0].text;
+  const period = document.getElementById("weekPeriod").selectedOptions[0]?.text || "";
   const recipientEmail = (document.getElementById("recipientEmail").value || "").trim();
   const schoolName = document.getElementById("schoolName").value || "";
   const supervisorEmail = document.getElementById("supervisorEmail").value || "";
@@ -399,6 +377,10 @@ async function submitTimesheet() {
 
   if (!recipientEmail) {
     alert("Please enter the email address to send this timesheet to.");
+    return;
+  }
+  if (!loggedInEmail) {
+    alert("You are not logged in. Please log in again.");
     return;
   }
 
@@ -422,13 +404,12 @@ async function submitTimesheet() {
     supervisorName,
     recipientEmail,
     totalHours,
-    userEmail: loggedInEmail || "",
+    userEmail: loggedInEmail,  // used by Apps Script allow-list
     rows
   };
 
   try {
-    // Note: mode:no-cors means we won't be able to read the response,
-    // but the Apps Script will still receive the POST.
+    // Use no-cors so the browser doesn't block the request; server still receives it.
     await fetch(SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
@@ -436,20 +417,13 @@ async function submitTimesheet() {
       body: JSON.stringify(payload)
     });
 
-    alert("Submitted! It will be saved to the Google Sheet and emailed (with PDF) by Apps Script.");
+    alert("Submitted! It will be saved to the Google Sheet and emailed by the server.");
   } catch (err) {
     console.error("Submit error:", err);
     alert("Submission failed. Please contact HR.");
   }
 }
-
-/* ===================== INIT ===================== */
-
-document.addEventListener("DOMContentLoaded", () => {
-  wireAuthUI();
-});
 </script>
 
 </body>
 </html>
-
