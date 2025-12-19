@@ -197,17 +197,6 @@ function setMsg(text, ok=false) {
 
 /* ===================== ALLOW LIST (Option 2) ===================== */
 
-async function isAllowed(email) {
-  const url = SCRIPT_URL
-    + "?action=isAllowed&email="
-    + encodeURIComponent(email || "")
-    + "&_ts=" + Date.now(); // cache-buster
-
-  const res = await fetch(url, { redirect: "follow", cache: "no-store" });
-  const data = await res.json();
-  return !!(data && data.allowed === true);
-}
-
 /* ===================== LOGIN WIRING ===================== */
 
 function wireAuthUI() {
@@ -227,9 +216,6 @@ function wireAuthUI() {
       const pass  = elLoginPassword.value || "";
 
       if (!email || !pass) return setMsg("Please enter both email and password.");
-
-      const ok = await isAllowed(email);
-      if (!ok) return setMsg("Your email is not authorized to use this timesheet. Please contact HR.");
 
       await auth.createUserWithEmailAndPassword(email, pass);
       setMsg("Account created. You are now logged in.", true);
@@ -271,13 +257,7 @@ function wireAuthUI() {
       }
 
       // Enforce allow-list after login too
-      const ok = await isAllowed(user.email.toLowerCase());
-      if (!ok) {
-        await auth.signOut();
-        setMsg("Your email is not authorized to use this timesheet. Please contact HR.");
-        return;
-      }
-
+      
       loggedInEmail = user.email;
       elLoggedInInfo.textContent = "Logged in as: " + loggedInEmail;
       elSignOutBtn.style.display = "inline-block";
