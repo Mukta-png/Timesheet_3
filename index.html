@@ -88,6 +88,17 @@
       background-color: #0073e6;
       color: #fff;
     }
+    .login-box {
+      text-align: center;
+    }
+    .login-box p {
+      margin-bottom: 10px;
+    }
+    .user-email {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #333;
+    }
     @media print {
       .buttons {
         display: none;
@@ -98,13 +109,29 @@
       .sheet-container {
         box-shadow: none;
       }
+      #loginContainer {
+        display: none !important;
+      }
     }
   </style>
 </head>
 <body>
 
-<div class="sheet-container">
+<!-- Login container -->
+<div id="loginContainer" class="sheet-container">
+  <div class="login-box">
+    <h2>Timesheet Login</h2>
+    <p>Please sign in with your email to access the timesheet.</p>
+    <button id="googleSignIn">Sign in with Google</button>
+    <button id="signOut" style="display:none;">Sign out</button>
+    <div id="loggedInInfo" class="user-email"></div>
+  </div>
+</div>
+
+<!-- Timesheet container (hidden until authenticated) -->
+<div id="timesheetContainer" class="sheet-container" style="display:none;">
   <div class="logo-row">
+    <!-- make sure logo.png exists in the repo -->
     <img src="logo.png" alt="360 Degree Therapy Logo">
   </div>
 
@@ -167,7 +194,7 @@
   <table>
     <thead>
       <tr>
-        <th style="width: 36%;">Day of the month</th>
+        <th style="width: 36%;">Date</th>
         <th style="width: 16%;">Time In</th>
         <th style="width: 16%;">Time Out</th>
         <th style="width: 16%;">Lunch Break (minutes)</th>
@@ -186,18 +213,35 @@
 
   <div class="buttons">
     <button class="btn-print" type="button" onclick="printTimesheet()">Print</button>
-    <button class="btn-submit" type="button" onclick="submitTimesheet()">Submit & Email</button>
+    <button class="btn-submit" type="button" onclick="submitTimesheet()">Submit</button>
   </div>
 </div>
 
-<script>
-  // ✅ YOUR Google Sheets Web App URL:
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZHjAz7akkH0E4SPQmHppIMi-A_orkvNeNX-8ElaW83bSZrGJe4erliwVEVR8rRNlr/ex";
+<!-- Firebase (for login) -->
+<script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
 
-  const monthNames = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December"
-  ];
+<script>
+  // 🔴 GOOGLE SHEETS WEB APP URL
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZHjAz7akkH0E4SPQmHppIMi-A_orkvNeNX-8ElaW83bSZrGJe4erliwVEVR8rRNlr/exec";
+
+  // 🔴 TODO: Replace with your real Firebase config from the Firebase console
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    appId: "YOUR_APP_ID"
+    // add any other fields from your config snippet
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const provider = new firebase.auth.GoogleAuthProvider();
+  let loggedInEmail = "";
+
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const dayNames  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const YEAR = 2026;  // fixed to 2026
 
   function ordinalSuffix(n) {
     const j=n%10, k=n%100;
@@ -242,8 +286,7 @@
   function populateDays() {
     const value=document.getElementById("weekPeriod").value;
     const [monthIndex, half]=value.split("-").map(Number);
-    const year=new Date().getFullYear();
-    const daysInMonth=new Date(year,monthIndex+1,0).getDate();
+    const daysInMonth=new Date(YEAR,monthIndex+1,0).getDate();
     const startDay=half===1?1:16;
     const endDay=half===1?15:daysInMonth;
 
@@ -251,7 +294,12 @@
     tbody.innerHTML="";
 
     for(let d=startDay; d<=endDay; d++){
-      const dateStr=`${monthNames[monthIndex]} ${d}${ordinalSuffix(d)}, ${year}`;
+      const dateObj=new Date(YEAR,monthIndex,d);
+      const dow=dateObj.getDay();          // 0=Sun, 6=Sat
+      if(dow===0 || dow===6) continue;     // skip weekends
+
+      const dowName=dayNames[dow];
+      const dateStr=`${dowName}, ${monthNames[monthIndex]} ${d}${ordinalSuffix(d)}, ${YEAR}`;
       tbody.appendChild(createRow(dateStr));
     }
     updateTotals();
@@ -293,33 +341,36 @@
     const employeeTitle=document.getElementById("employeeTitle").value;
     const supervisorName=document.getElementById("supervisorName").value;
     const supervisorEmail=document.getElementById("supervisorEmail").value;
-    const recipient=document.getElementById("recipientEmail").value.trim();
-    if(!recipient)return alert("Please enter email address.");
+    const recipient=(document.getElementById("recipientEmail").value||"").trim();
+
+    if(!recipient){
+      alert("Please enter the email address to send this timesheet to.");
+      return;
+    }
 
     const totalHours=document.getElementById("totalHours").textContent;
 
     const rowsData=[];
-    let body=`Timesheet Period: ${period}\nSchool: ${schoolName}\nEmployee: ${employeeName}\nTitle: ${employeeTitle}\nSupervisor: ${supervisorName}\nSupervisor Email: ${supervisorEmail}\n\nDay-by-day details:\n`;
-
     document.querySelectorAll("#timesheetBody tr").forEach(row=>{
       const date=row.cells[0].textContent;
       const timeIn=row.querySelector(".time-in").value;
       const timeOut=row.querySelector(".time-out").value;
       const lunch=row.querySelector(".lunch").value||"0";
       const hours=row.querySelector(".row-total").value||"0";
-
       rowsData.push({date,timeIn,timeOut,lunchMinutes:lunch,hours});
-
-      if(timeIn||timeOut||hours!=="0"){
-        body+=`${date} | In: ${timeIn} | Out: ${timeOut} | Lunch (min): ${lunch} | Hours: ${hours}\n`;
-      }
     });
 
-    body+=`\nTotal Hours: ${totalHours}\n`;
-
     const payload={
-      period,schoolName,employeeName,employeeTitle,supervisorName,
-      supervisorEmail,recipientEmail:recipient,totalHours,rows:rowsData
+      period,
+      schoolName,
+      employeeName,
+      employeeTitle,
+      supervisorName,
+      supervisorEmail,
+      recipientEmail:recipient,
+      totalHours,
+      rows:rowsData,
+      userEmail: loggedInEmail || ""
     };
 
     try{
@@ -329,23 +380,58 @@
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify(payload)
       });
-    }catch(e){console.error(e);}
+      alert("Timesheet submitted. A copy will be emailed with a PDF attachment.");
+    }catch(e){
+      console.error(e);
+      alert("There was an error submitting your timesheet. Please contact HR.");
+    }
+  }
 
-    let cc="process@360customer.com";
-    if(supervisorEmail)cc+=`,`+supervisorEmail;
+  // 🔐 Auth wiring
+  function setupAuth() {
+    const signInBtn=document.getElementById("googleSignIn");
+    const signOutBtn=document.getElementById("signOut");
+    const loggedInInfo=document.getElementById("loggedInInfo");
+    const loginContainer=document.getElementById("loginContainer");
+    const sheetContainer=document.getElementById("timesheetContainer");
 
-    const subject=`Timesheet - ${employeeName} - ${period}`;
-    const mailto=
-      `mailto:${encodeURIComponent(recipient)}?cc=${encodeURIComponent(cc)}`+
-      `&subject=${encodeURIComponent(subject)}`+
-      `&body=${encodeURIComponent(body)}`;
+    signInBtn.addEventListener("click",()=>{
+      auth.signInWithPopup(provider).catch(err=>{
+        console.error(err);
+        alert("Login failed: " + err.message);
+      });
+    });
 
-    window.location.href=mailto;
+    signOutBtn.addEventListener("click",()=>{
+      auth.signOut();
+    });
+
+    auth.onAuthStateChanged(user=>{
+      if(user){
+        loggedInEmail=user.email || "";
+        loggedInInfo.textContent="Logged in as: " + loggedInEmail;
+        signInBtn.style.display="none";
+        signOutBtn.style.display="inline-block";
+        loginContainer.style.display="none";
+        sheetContainer.style.display="block";
+
+        // Optionally pre-fill send-to email or something else with logged in email
+        // document.getElementById("recipientEmail").value = loggedInEmail;
+      } else {
+        loggedInEmail="";
+        loggedInInfo.textContent="";
+        signInBtn.style.display="inline-block";
+        signOutBtn.style.display="none";
+        loginContainer.style.display="block";
+        sheetContainer.style.display="none";
+      }
+    });
   }
 
   document.addEventListener("DOMContentLoaded",()=>{
     populateDays();
     document.getElementById("weekPeriod").addEventListener("change",populateDays);
+    setupAuth();
   });
 </script>
 
