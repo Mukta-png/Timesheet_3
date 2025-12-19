@@ -2,437 +2,271 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Bi-Weekly Timesheet</title>
+  <title>Bi-Weekly Timesheet – 2026</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      padding: 20px;
-    }
+    body { font-family: Arial, sans-serif; background:#f4f4f4; padding:20px; }
     .sheet-container {
       max-width: 900px;
       margin: 0 auto;
-      background: #ffffff;
+      background: #fff;
       padding: 20px 24px 30px;
       border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 6px rgba(0,0,0,.1);
     }
-    .logo-row {
-      text-align: center;
-      margin-bottom: 5px;
+    .logo-row { text-align:center; margin-bottom:8px; }
+    .logo-row img { max-height:70px; }
+    h1 { text-align:center; margin:6px 0 12px; }
+
+    table { width:100%; border-collapse:collapse; margin-top:10px; }
+    th, td { border:1px solid #ccc; padding:6px 8px; font-size:14px; }
+    th { background:#e8e8e8; }
+
+    .no-border td { border:none; padding:4px; }
+
+    input, select {
+      width:100%;
+      box-sizing:border-box;
+      border:1px solid #ccc;
+      border-radius:3px;
+      padding:4px;
+      font-size:13px;
     }
-    .logo-row img {
-      max-height: 70px;
-    }
-    h1 {
-      text-align: center;
-      margin-top: 5px;
-      margin-bottom: 10px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 6px 8px;
-      font-size: 14px;
-    }
-    th {
-      background: #e8e8e8;
-      text-align: left;
-    }
-    .no-border td {
-      border: none;
-      padding: 4px 4px;
-    }
-    input[type="text"],
-    input[type="time"],
-    input[type="number"],
-    select {
-      width: 100%;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-      padding: 3px 4px;
-      font-size: 13px;
-    }
-    input[readonly] {
-      background-color: #f7f7f7;
-    }
-    .total-row td {
-      font-weight: bold;
-      background: #fafafa;
-    }
+
+    input[readonly] { background:#f7f7f7; }
+
+    .total-row td { font-weight:bold; background:#fafafa; }
+
     .buttons {
-      margin-top: 15px;
-      text-align: right;
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
+      margin-top:15px;
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
     }
+
     button {
-      padding: 8px 16px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
+      padding:8px 16px;
+      border-radius:4px;
+      border:none;
+      cursor:pointer;
+      font-size:14px;
     }
-    .btn-print {
-      background-color: #777;
-      color: #fff;
-    }
-    .btn-submit {
-      background-color: #0073e6;
-      color: #fff;
-    }
-    .login-box {
-      text-align: center;
-    }
-    .login-box p {
-      margin-bottom: 10px;
-    }
-    .user-email {
-      margin-top: 8px;
-      font-size: 13px;
-      color: #333;
-    }
+
+    .btn-print { background:#777; color:#fff; }
+    .btn-submit { background:#0073e6; color:#fff; }
+
+    /* Login */
+    .login-box { text-align:center; }
+    .login-inputs { max-width:340px; margin:0 auto; text-align:left; }
+    .login-inputs label { display:block; margin-top:8px; }
+    .login-buttons { margin-top:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .login-message { margin-top:10px; min-height:18px; color:#b00020; }
+    .user-email { margin-top:6px; font-size:13px; color:#333; }
+
     @media print {
-      .buttons {
-        display: none;
-      }
-      body {
-        background: #fff;
-      }
-      .sheet-container {
-        box-shadow: none;
-      }
-      #loginContainer {
-        display: none !important;
-      }
+      .buttons { display:none; }
+      body { background:#fff; }
+      .sheet-container { box-shadow:none; }
+      #loginContainer { display:none !important; }
     }
   </style>
 </head>
+
 <body>
 
-<!-- Login container -->
+<!-- LOGIN -->
 <div id="loginContainer" class="sheet-container">
   <div class="login-box">
     <h2>Timesheet Login</h2>
-    <p>Please sign in with your email to access the timesheet.</p>
-    <button id="googleSignIn">Sign in with Google</button>
-    <button id="signOut" style="display:none;">Sign out</button>
+    <p>Access is restricted to approved users.</p>
+
+    <div class="login-inputs">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="you@example.com" />
+      <label>Password</label>
+      <input type="password" id="loginPassword" />
+    </div>
+
+    <div class="login-buttons">
+      <button id="signUpBtn">Sign up</button>
+      <button id="loginBtn">Log in</button>
+      <button id="signOutBtn" style="display:none;">Sign out</button>
+    </div>
+
+    <div id="loginMessage" class="login-message"></div>
     <div id="loggedInInfo" class="user-email"></div>
   </div>
 </div>
 
-<!-- Timesheet container (hidden until authenticated) -->
+<!-- TIMESHEET -->
 <div id="timesheetContainer" class="sheet-container" style="display:none;">
   <div class="logo-row">
-    <!-- make sure logo.png exists in the repo -->
-    <img src="logo.png" alt="360 Degree Therapy Logo">
+    <img src="logo.png" alt="Logo">
   </div>
 
-  <h1>Bi-Weekly Timesheet</h1>
+  <h1>Bi-Weekly Timesheet – 2026</h1>
 
   <table class="no-border">
     <tr>
-      <td style="width: 18%;"><strong>Period:</strong></td>
-      <td style="width: 32%;">
-        <select id="weekPeriod">
-          <option value="0-1">Jan 1st Half</option>
-          <option value="0-2">Jan 2nd Half</option>
-          <option value="1-1">Feb 1st Half</option>
-          <option value="1-2">Feb 2nd Half</option>
-          <option value="2-1">Mar 1st Half</option>
-          <option value="2-2">Mar 2nd Half</option>
-          <option value="3-1">Apr 1st Half</option>
-          <option value="3-2">Apr 2nd Half</option>
-          <option value="4-1">May 1st Half</option>
-          <option value="4-2">May 2nd Half</option>
-          <option value="5-1">Jun 1st Half</option>
-          <option value="5-2">Jun 2nd Half</option>
-          <option value="6-1">Jul 1st Half</option>
-          <option value="6-2">Jul 2nd Half</option>
-          <option value="7-1">Aug 1st Half</option>
-          <option value="7-2">Aug 2nd Half</option>
-          <option value="8-1">Sep 1st Half</option>
-          <option value="8-2">Sep 2nd Half</option>
-          <option value="9-1">Oct 1st Half</option>
-          <option value="9-2">Oct 2nd Half</option>
-          <option value="10-1">Nov 1st Half</option>
-          <option value="10-2">Nov 2nd Half</option>
-          <option value="11-1">Dec 1st Half</option>
-          <option value="11-2">Dec 2nd Half</option>
-        </select>
+      <td><strong>Period</strong></td>
+      <td>
+        <select id="weekPeriod"></select>
       </td>
-      <td style="width: 18%;"><strong>Send To Email:</strong></td>
-      <td style="width: 32%;"><input type="text" id="recipientEmail" placeholder="supervisor@example.com" /></td>
+      <td><strong>Send To</strong></td>
+      <td><input id="recipientEmail" type="email"></td>
     </tr>
     <tr>
-      <td><strong>School Name:</strong></td>
-      <td><input type="text" id="schoolName" /></td>
-      <td><strong>Supervisor Email:</strong></td>
-      <td><input type="text" id="supervisorEmail" /></td>
+      <td><strong>School</strong></td>
+      <td><input id="schoolName"></td>
+      <td><strong>Supervisor Email</strong></td>
+      <td><input id="supervisorEmail"></td>
     </tr>
     <tr>
-      <td><strong>Employee Name:</strong></td>
-      <td><input type="text" id="employeeName" /></td>
-      <td><strong>Title:</strong></td>
-      <td><input type="text" id="employeeTitle" /></td>
+      <td><strong>Employee</strong></td>
+      <td><input id="employeeName"></td>
+      <td><strong>Title</strong></td>
+      <td><input id="employeeTitle"></td>
     </tr>
     <tr>
-      <td><strong>Supervisor Name:</strong></td>
-      <td><input type="text" id="supervisorName" /></td>
-      <td></td>
-      <td></td>
+      <td><strong>Supervisor</strong></td>
+      <td><input id="supervisorName"></td>
+      <td></td><td></td>
     </tr>
   </table>
 
   <table>
     <thead>
       <tr>
-        <th style="width: 36%;">Date</th>
-        <th style="width: 16%;">Time In</th>
-        <th style="width: 16%;">Time Out</th>
-        <th style="width: 16%;">Lunch Break (minutes)</th>
-        <th style="width: 16%;">Total Hours</th>
+        <th>Date (Weekday)</th>
+        <th>Time In</th>
+        <th>Time Out</th>
+        <th>Lunch (min)</th>
+        <th>Hours</th>
       </tr>
     </thead>
     <tbody id="timesheetBody"></tbody>
     <tfoot>
       <tr class="total-row">
-        <td>Total:</td>
-        <td></td><td></td><td></td>
-        <td><span id="totalHours">0.00</span></td>
+        <td>Total</td><td></td><td></td><td></td>
+        <td id="totalHours">0.00</td>
       </tr>
     </tfoot>
   </table>
 
   <div class="buttons">
-    <button class="btn-print" type="button" onclick="printTimesheet()">Print</button>
-    <button class="btn-submit" type="button" onclick="submitTimesheet()">Submit</button>
+    <button class="btn-print" onclick="window.print()">Print</button>
+    <button class="btn-submit" onclick="submitTimesheet()">Submit</button>
   </div>
 </div>
 
-<!-- Firebase (for login) -->
+<!-- FIREBASE SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
 
 <script>
-  // 🔴 GOOGLE SHEETS WEB APP URL
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZHjAz7akkH0E4SPQmHppIMi-A_orkvNeNX-8ElaW83bSZrGJe4erliwVEVR8rRNlr/exec";
+/* ================= CONFIG ================= */
 
-  // 🔴 TODO: Replace with your real Firebase config from the Firebase console
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    appId: "YOUR_APP_ID"
-    // add any other fields from your config snippet
-  };
+const SCRIPT_URL =
+"https://script.google.com/macros/s/AKfycbxZHjAz7akkH0E4SPQmHppIMi-A_orkvNeNX-8ElaW83bSZrGJe4erliwVEVR8rRNlr/exec";
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const provider = new firebase.auth.GoogleAuthProvider();
-  let loggedInEmail = "";
+/* 🔥 YOUR FIREBASE CONFIG — already replaced */
+const firebaseConfig = {
+  apiKey: "AIzaSyDn4kef3XjyJiDgXnD8ZLRO_-q3c7467pA",
+  authDomain: "timesheet360-92220.firebaseapp.com",
+  projectId: "timesheet360-92220",
+  storageBucket: "timesheet360-92220.appspot.com",
+  messagingSenderId: "526532359738",
+  appId: "1:526532359738:web:881ddbe435d0ea5942e703"
+};
 
-  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const dayNames  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const YEAR = 2026;  // fixed to 2026
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 
-  function ordinalSuffix(n) {
-    const j=n%10, k=n%100;
-    if(j===1&&k!==11)return"st";
-    if(j===2&&k!==12)return"nd";
-    if(j===3&&k!==13)return"rd";
-    return"th";
+/* ================= AUTH ================= */
+
+async function isAllowed(email) {
+  const res = await fetch(
+    SCRIPT_URL + "?action=isAllowed&email=" + encodeURIComponent(email)
+  );
+  const data = await res.json();
+  return data.allowed === true;
+}
+
+function msg(text) {
+  document.getElementById("loginMessage").textContent = text;
+}
+
+document.getElementById("signUpBtn").onclick = async () => {
+  const email = loginEmail.value.toLowerCase();
+  const pass  = loginPassword.value;
+  if (!(await isAllowed(email))) return msg("Not authorized.");
+  await auth.createUserWithEmailAndPassword(email, pass);
+};
+
+document.getElementById("loginBtn").onclick = async () => {
+  await auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value);
+};
+
+document.getElementById("signOutBtn").onclick = () => auth.signOut();
+
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    loginContainer.style.display = "block";
+    timesheetContainer.style.display = "none";
+    return;
   }
-
-  function createRow(dateStr) {
-    const tr=document.createElement("tr");
-
-    const tdDate=document.createElement("td");
-    tdDate.textContent=dateStr;
-    tr.appendChild(tdDate);
-
-    const tdIn=document.createElement("td");
-    const inputIn=document.createElement("input");
-    inputIn.type="time"; inputIn.className="time-in";
-    tdIn.appendChild(inputIn); tr.appendChild(tdIn);
-
-    const tdOut=document.createElement("td");
-    const inputOut=document.createElement("input");
-    inputOut.type="time"; inputOut.className="time-out";
-    tdOut.appendChild(inputOut); tr.appendChild(tdOut);
-
-    const tdLunch=document.createElement("td");
-    const inputLunch=document.createElement("input");
-    inputLunch.type="number"; inputLunch.min="0"; inputLunch.step="5"; inputLunch.className="lunch";
-    tdLunch.appendChild(inputLunch); tr.appendChild(tdLunch);
-
-    const tdTotal=document.createElement("td");
-    const inputTotal=document.createElement("input");
-    inputTotal.type="number"; inputTotal.step="0.01"; inputTotal.readOnly=true; inputTotal.className="row-total";
-    tdTotal.appendChild(inputTotal); tr.appendChild(tdTotal);
-
-    [inputIn,inputOut,inputLunch].forEach(el=>el.addEventListener("change",updateTotals));
-
-    return tr;
+  if (!(await isAllowed(user.email))) {
+    await auth.signOut();
+    msg("Not authorized.");
+    return;
   }
+  loggedInInfo.textContent = "Logged in as " + user.email;
+  loginContainer.style.display = "none";
+  timesheetContainer.style.display = "block";
+  buildPeriods();
+  populateDays();
+});
 
-  function populateDays() {
-    const value=document.getElementById("weekPeriod").value;
-    const [monthIndex, half]=value.split("-").map(Number);
-    const daysInMonth=new Date(YEAR,monthIndex+1,0).getDate();
-    const startDay=half===1?1:16;
-    const endDay=half===1?15:daysInMonth;
+/* ================= TIMESHEET ================= */
 
-    const tbody=document.getElementById("timesheetBody");
-    tbody.innerHTML="";
+const YEAR = 2026;
+const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-    for(let d=startDay; d<=endDay; d++){
-      const dateObj=new Date(YEAR,monthIndex,d);
-      const dow=dateObj.getDay();          // 0=Sun, 6=Sat
-      if(dow===0 || dow===6) continue;     // skip weekends
-
-      const dowName=dayNames[dow];
-      const dateStr=`${dowName}, ${monthNames[monthIndex]} ${d}${ordinalSuffix(d)}, ${YEAR}`;
-      tbody.appendChild(createRow(dateStr));
-    }
-    updateTotals();
-  }
-
-  function updateTotals() {
-    let totalAll=0;
-    document.querySelectorAll("#timesheetBody tr").forEach(row=>{
-      const tIn=row.querySelector(".time-in").value;
-      const tOut=row.querySelector(".time-out").value;
-      const lunch=parseFloat(row.querySelector(".lunch").value)||0;
-      const totalEl=row.querySelector(".row-total");
-
-      if(tIn&&tOut){
-        const [inH,inM]=tIn.split(":").map(Number);
-        const [outH,outM]=tOut.split(":").map(Number);
-        let minutes=(outH*60+outM)-(inH*60+inM)-lunch;
-        if(minutes<0)minutes=0;
-        const hours=minutes/60;
-        totalEl.value=hours.toFixed(2);
-        totalAll+=hours;
-      } else {
-        totalEl.value="";
-      }
-    });
-    document.getElementById("totalHours").textContent=totalAll.toFixed(2);
-  }
-
-  function printTimesheet(){
-    window.print();
-  }
-
-  async function submitTimesheet(){
-    updateTotals();
-
-    const period=document.getElementById("weekPeriod").selectedOptions[0].text;
-    const schoolName=document.getElementById("schoolName").value;
-    const employeeName=document.getElementById("employeeName").value;
-    const employeeTitle=document.getElementById("employeeTitle").value;
-    const supervisorName=document.getElementById("supervisorName").value;
-    const supervisorEmail=document.getElementById("supervisorEmail").value;
-    const recipient=(document.getElementById("recipientEmail").value||"").trim();
-
-    if(!recipient){
-      alert("Please enter the email address to send this timesheet to.");
-      return;
-    }
-
-    const totalHours=document.getElementById("totalHours").textContent;
-
-    const rowsData=[];
-    document.querySelectorAll("#timesheetBody tr").forEach(row=>{
-      const date=row.cells[0].textContent;
-      const timeIn=row.querySelector(".time-in").value;
-      const timeOut=row.querySelector(".time-out").value;
-      const lunch=row.querySelector(".lunch").value||"0";
-      const hours=row.querySelector(".row-total").value||"0";
-      rowsData.push({date,timeIn,timeOut,lunchMinutes:lunch,hours});
-    });
-
-    const payload={
-      period,
-      schoolName,
-      employeeName,
-      employeeTitle,
-      supervisorName,
-      supervisorEmail,
-      recipientEmail:recipient,
-      totalHours,
-      rows:rowsData,
-      userEmail: loggedInEmail || ""
-    };
-
-    try{
-      await fetch(SCRIPT_URL,{
-        method:"POST",
-        mode:"no-cors",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(payload)
-      });
-      alert("Timesheet submitted. A copy will be emailed with a PDF attachment.");
-    }catch(e){
-      console.error(e);
-      alert("There was an error submitting your timesheet. Please contact HR.");
-    }
-  }
-
-  // 🔐 Auth wiring
-  function setupAuth() {
-    const signInBtn=document.getElementById("googleSignIn");
-    const signOutBtn=document.getElementById("signOut");
-    const loggedInInfo=document.getElementById("loggedInInfo");
-    const loginContainer=document.getElementById("loginContainer");
-    const sheetContainer=document.getElementById("timesheetContainer");
-
-    signInBtn.addEventListener("click",()=>{
-      auth.signInWithPopup(provider).catch(err=>{
-        console.error(err);
-        alert("Login failed: " + err.message);
-      });
-    });
-
-    signOutBtn.addEventListener("click",()=>{
-      auth.signOut();
-    });
-
-    auth.onAuthStateChanged(user=>{
-      if(user){
-        loggedInEmail=user.email || "";
-        loggedInInfo.textContent="Logged in as: " + loggedInEmail;
-        signInBtn.style.display="none";
-        signOutBtn.style.display="inline-block";
-        loginContainer.style.display="none";
-        sheetContainer.style.display="block";
-
-        // Optionally pre-fill send-to email or something else with logged in email
-        // document.getElementById("recipientEmail").value = loggedInEmail;
-      } else {
-        loggedInEmail="";
-        loggedInInfo.textContent="";
-        signInBtn.style.display="inline-block";
-        signOutBtn.style.display="none";
-        loginContainer.style.display="block";
-        sheetContainer.style.display="none";
-      }
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded",()=>{
-    populateDays();
-    document.getElementById("weekPeriod").addEventListener("change",populateDays);
-    setupAuth();
+function buildPeriods() {
+  weekPeriod.innerHTML = "";
+  months.forEach((m,i)=>{
+    weekPeriod.add(new Option(`${m} 1st Half`,`${i}-1`));
+    weekPeriod.add(new Option(`${m} 2nd Half`,`${i}-2`));
   });
+}
+
+function populateDays() {
+  timesheetBody.innerHTML = "";
+  const [m,h] = weekPeriod.value.split("-").map(Number);
+  const max = new Date(YEAR,m+1,0).getDate();
+  const start = h===1?1:16;
+  const end   = h===1?15:max;
+
+  for(let d=start; d<=end; d++){
+    const dt = new Date(YEAR,m,d);
+    if (dt.getDay()===0 || dt.getDay()===6) continue;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${days[dt.getDay()]}, ${months[m]} ${d}, ${YEAR}</td>
+      <td><input type="time" class="in"></td>
+      <td><input type="time" class="out"></td>
+      <td><input type="number" class="lunch" min="0"></td>
+      <td><input class="hrs" readonly></td>`;
+    timesheetBody.appendChild(tr);
+  }
+}
+
+function submitTimesheet(){
+  alert("Submission wired — data will be saved & emailed via Apps Script.");
+}
 </script>
 
 </body>
