@@ -91,7 +91,6 @@
 <!-- TIMESHEET -->
 <div id="timesheetContainer" class="sheet-container" style="display:none;">
   <div class="logo-row">
-    <!-- Put logo.png in the same folder as index.html in your repo -->
     <img src="logo.png" alt="360 Logo">
   </div>
 
@@ -148,7 +147,7 @@
 
   <div class="buttons">
     <button class="btn-print" type="button" onclick="window.print()">Print</button>
-    <button class="btn-submit" type="button" onclick="submitTimesheet()">Submit</button>
+    <button id="submitBtn" class="btn-submit" type="button" onclick="submitTimesheet()">Submit</button>
   </div>
 
   <div style="margin-top:10px; font-size:12px; color:#666;">
@@ -326,7 +325,7 @@ function populateDays() {
   for (let d = startDay; d <= endDay; d++) {
     const dt = new Date(YEAR, monthIndex, d);
     const dow = dt.getDay();
-    if (dow === 0 || dow === 6) continue; // skip Sun/Sat
+    if (dow === 0 || dow === 6) continue;
 
     const label = `${dayNames[dow]}, ${monthNames[monthIndex]} ${d}${ordinalSuffix(d)}, ${YEAR}`;
     tbody.appendChild(createRow(label));
@@ -361,7 +360,15 @@ function updateTotals() {
   document.getElementById("totalHours").textContent = totalAll.toFixed(2);
 }
 
-/* ===================== SUBMIT (ONLY CALLS APPS SCRIPT HERE) ===================== */
+/* ===================== SUBMIT (CONFIRMED SUCCESS ONLY) ===================== */
+
+function setSubmitBusy(isBusy) {
+  const btn = document.getElementById("submitBtn");
+  if (!btn) return;
+  btn.disabled = isBusy;
+  btn.style.opacity = isBusy ? "0.7" : "1";
+  btn.textContent = isBusy ? "Submitting..." : "Submit";
+}
 
 async function submitTimesheet() {
   updateTotals();
@@ -395,32 +402,53 @@ async function submitTimesheet() {
     });
   });
 
-  const payload = {
-    period,
-    schoolName,
-    supervisorEmail,
-    employeeName,
-    employeeTitle,
-    supervisorName,
-    recipientEmail,
-    totalHours,
-    userEmail: loggedInEmail,  // used by Apps Script allow-list
-    rows
-  };
+  // Send as FormData to avoid CORS preflight issues.
+  // Nested data (rows) is sent as a JSON string.
+  const formData = new FormData();
+  formData.append("period", period);
+  formData.append("schoolName", schoolName);
+  formData.append("supervisorEmail", supervisorEmail);
+  formData.append("employeeName", employeeName);
+  formData.append("employeeTitle", employeeTitle);
+  formData.append("supervisorName", supervisorName);
+  formData.append("recipientEmail", recipientEmail);
+  formData.append("totalHours", totalHours);
+  formData.append("userEmail", loggedInEmail);
+  formData.append("rows", JSON.stringify(rows));
+
+  setSubmitBusy(true);
 
   try {
-    // Use no-cors so the browser doesn't block the request; server still receives it.
-    await fetch(SCRIPT_URL, {
+    const res = await fetch(SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: formData,
+      redirect: "follow"
     });
+
+    const raw = await res.text(); // could be OK or JSON
+    let ok = false;
+
+    // If server returns JSON {status:"ok"}
+    try {
+      const parsed = JSON.parse(raw);
+      ok = (parsed && String(parsed.status).toLowerCase() === "ok");
+    } catch {
+      // If server returns plain text OK
+      ok = String(raw || "").trim().toLowerCase() === "ok";
+    }
+
+    if (!res.ok || !ok) {
+      console.error("Server did not confirm success:", { httpStatus: res.status, raw });
+      alert("Submission failed (server did not confirm). Please contact HR.");
+      return;
+    }
 
     alert("Submitted! It will be saved to the Google Sheet and emailed by the server.");
   } catch (err) {
     console.error("Submit error:", err);
     alert("Submission failed. Please contact HR.");
+  } finally {
+    setSubmitBusy(false);
   }
 }
 </script>
