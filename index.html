@@ -22,7 +22,7 @@
 
     .no-border td { border: none; padding: 4px; }
 
-    input, select {
+    input, select, textarea {
       width: 100%; box-sizing: border-box;
       border: 1px solid #ccc; border-radius: 3px;
       padding: 4px; font-size: 13px;
@@ -38,6 +38,7 @@
     }
     .btn-print { background:#777; color:#fff; }
     .btn-submit { background:#0073e6; color:#fff; }
+    button:disabled { cursor: not-allowed; }
 
     /* Login UI */
     .login-box { text-align:center; }
@@ -48,7 +49,7 @@
     .user-email { margin-top: 8px; font-size: 13px; color:#333; }
 
     @media print {
-      .buttons { display:none; }
+      .buttons, #notesWrap { display:none !important; }
       body { background:#fff; }
       .sheet-container { box-shadow:none; }
       #loginContainer { display:none !important; }
@@ -91,6 +92,7 @@
 <!-- TIMESHEET -->
 <div id="timesheetContainer" class="sheet-container" style="display:none;">
   <div class="logo-row">
+    <!-- Put logo.png in the same folder as index.html in your repo -->
     <img src="logo.png" alt="360 Logo">
   </div>
 
@@ -145,6 +147,16 @@
     </tfoot>
   </table>
 
+  <!-- NOTES -->
+  <div id="notesWrap" style="margin-top:10px;">
+    <label for="notes" style="display:block; font-size:13px; margin-bottom:4px;">
+      <strong>Notes (optional)</strong>
+    </label>
+    <textarea id="notes" rows="3"
+      style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:8px; font-size:13px;"
+      placeholder="Add any notes for payroll or the supervisor..."></textarea>
+  </div>
+
   <div class="buttons">
     <button class="btn-print" type="button" onclick="window.print()">Print</button>
     <button id="submitBtn" class="btn-submit" type="button" onclick="submitTimesheet()">Submit</button>
@@ -163,7 +175,7 @@
 /* ===================== CONFIG ===================== */
 
 // Your Apps Script Web App URL (POST only)
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwyMuC8UVXly9jEzLUP-en-ZlSpCxYiWxJTSNopLWzcMyARtTBV3-7F0GyXJZYf0rww/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZHjAz7akkH0E4SPQmHppIMi-A_orkvNeNX-8ElaW83bSZrGJe4erliwVEVR8rRNlr/exec";
 
 // Your Firebase config
 const firebaseConfig = {
@@ -202,7 +214,7 @@ function showTimesheet(email) {
   document.getElementById("loggedInInfo").textContent = "Logged in as: " + email;
 }
 
-/* ===================== AUTH (NO FETCH HERE) ===================== */
+/* ===================== AUTH ===================== */
 
 document.getElementById("signUpBtn").addEventListener("click", async () => {
   try {
@@ -325,7 +337,7 @@ function populateDays() {
   for (let d = startDay; d <= endDay; d++) {
     const dt = new Date(YEAR, monthIndex, d);
     const dow = dt.getDay();
-    if (dow === 0 || dow === 6) continue;
+    if (dow === 0 || dow === 6) continue; // skip Sun/Sat
 
     const label = `${dayNames[dow]}, ${monthNames[monthIndex]} ${d}${ordinalSuffix(d)}, ${YEAR}`;
     tbody.appendChild(createRow(label));
@@ -381,6 +393,7 @@ async function submitTimesheet() {
   const employeeTitle = document.getElementById("employeeTitle").value || "";
   const supervisorName = document.getElementById("supervisorName").value || "";
   const totalHours = document.getElementById("totalHours").textContent;
+  const notes = document.getElementById("notes").value || "";
 
   if (!recipientEmail) {
     alert("Please enter the email address to send this timesheet to.");
@@ -414,6 +427,7 @@ async function submitTimesheet() {
   formData.append("recipientEmail", recipientEmail);
   formData.append("totalHours", totalHours);
   formData.append("userEmail", loggedInEmail);
+  formData.append("notes", notes);
   formData.append("rows", JSON.stringify(rows));
 
   setSubmitBusy(true);
@@ -425,15 +439,13 @@ async function submitTimesheet() {
       redirect: "follow"
     });
 
-    const raw = await res.text(); // could be OK or JSON
+    const raw = await res.text(); // could be JSON
     let ok = false;
 
-    // If server returns JSON {status:"ok"}
     try {
       const parsed = JSON.parse(raw);
-      ok = (parsed && String(parsed.status).toLowerCase() === "ok");
+      ok = parsed && String(parsed.status).toLowerCase() === "ok";
     } catch {
-      // If server returns plain text OK
       ok = String(raw || "").trim().toLowerCase() === "ok";
     }
 
@@ -443,7 +455,7 @@ async function submitTimesheet() {
       return;
     }
 
-    alert("Submitted! It will be saved to the Google Sheet and emailed by the server.");
+    alert("Submitted! It will be saved to the Google Sheet and emailed by the server (PDF attached).");
   } catch (err) {
     console.error("Submit error:", err);
     alert("Submission failed. Please contact HR.");
