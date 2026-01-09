@@ -113,11 +113,18 @@
       </td>
     </tr>
     <tr>
-      <td><strong>School Name</strong></td>
-      <td><input type="text" id="schoolName" /></td>
-      <td><strong>Supervisor Email</strong></td>
-      <td><input type="email" id="supervisorEmail" /></td>
-    </tr>
+  <td><strong>School District</strong></td>
+  <td><input type="text" id="schoolDistrict" /></td>
+  <td><strong>Supervisor Email</strong></td>
+  <td><input type="email" id="supervisorEmail" /></td>
+</tr>
+<tr>
+  <td><strong>School Name</strong></td>
+  <td><input type="text" id="schoolName" /></td>
+  <td></td>
+  <td></td>
+</tr>
+
     <tr>
       <td><strong>Employee Name</strong></td>
       <td><input type="text" id="employeeName" /></td>
@@ -390,6 +397,7 @@ async function submitTimesheet() {
 
   const period = document.getElementById("weekPeriod").selectedOptions[0]?.text || "";
   const recipientEmail = (document.getElementById("recipientEmail").value || "").trim();
+  const schoolDistrict = document.getElementById("schoolDistrict").value || "";
   const schoolName = document.getElementById("schoolName").value || "";
   const supervisorEmail = document.getElementById("supervisorEmail").value || "";
   const employeeName = document.getElementById("employeeName").value || "";
@@ -422,6 +430,7 @@ async function submitTimesheet() {
   // Nested data (rows) is sent as a JSON string.
   const formData = new FormData();
   formData.append("period", period);
+  formData.append("schoolDistrict", schoolDistrict);
   formData.append("schoolName", schoolName);
   formData.append("supervisorEmail", supervisorEmail);
   formData.append("employeeName", employeeName);
